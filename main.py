@@ -7,7 +7,7 @@ from numba import jit
 import io
 import time
 
-st.set_page_config(layout="wide")  # Ustawienie szerokiego układu strony
+st.set_page_config(layout="wide")
 
 st.title("Drawing a Dot and Zooming on the Mandelbrot Set")
 

@@ -80,7 +80,7 @@ if "mandelbrot_bg" not in st.session_state:
     st.session_state.mandelbrot_bg = buf
 
 # Display the Mandelbrot image
-st.image(st.session_state.mandelbrot_bg, use_column_width=True)
+mandelbrot_image = Image.open(st.session_state.mandelbrot_bg)
 
 # Add slider for setting the zoom factor
 zoom_factor = st.slider('Zoom Factor', min_value=-1000, max_value=1000, value=st.session_state.zoom_factor, step=1)
@@ -94,7 +94,7 @@ canvas_result = st_canvas(
     fill_color="rgba(255, 165, 0, 0.3)",  # Semi-transparent orange fill color
     stroke_width=10,
     stroke_color="#000000",
-    background_image=Image.open(st.session_state.mandelbrot_bg),
+    background_image=mandelbrot_image,
     height=900,  # Height of canvas
     width=1600,  # Width of canvas
     drawing_mode="point",  # Drawing points mode

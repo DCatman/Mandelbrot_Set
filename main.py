@@ -4,11 +4,13 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 from numba import jit
+import io
 import time
 
 st.set_page_config(layout="wide")  # Ustawienie szerokiego układu strony
 
 st.title("Drawing a Dot and Zooming on the Mandelbrot Set")
+
 
 # Function to generate the Mandelbrot set
 @jit(nopython=True, fastmath=True)
@@ -29,15 +31,20 @@ def mandelbrot(h, w, x_min, x_max, y_min, y_max, max_iter):
 
     return div_time
 
-# Function to save the Mandelbrot image with higher resolution and anti-aliasing
-def save_mandelbrot_image(x_min, x_max, y_min, y_max, width, height, max_iter, filename='mandelbrot.png'):
+
+# Function to generate and return the Mandelbrot image as an in-memory file
+def generate_mandelbrot_image(x_min, x_max, y_min, y_max, width, height, max_iter):
     mandelbrot_image = mandelbrot(height, width, x_min, x_max, y_min, y_max, max_iter)
-    plt.figure(figsize=(width / 100, height / 100), dpi=100)
-    plt.imshow(mandelbrot_image, cmap='inferno', extent=(x_min, x_max, y_min, y_max), interpolation='bilinear')
-    plt.axis('off')
-    plt.savefig(filename, bbox_inches='tight', pad_inches=0, dpi=300)
-    plt.close()
-    return Image.open(filename)
+    fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=100)
+    ax.imshow(mandelbrot_image, cmap='inferno', extent=(x_min, x_max, y_min, y_max), interpolation='bilinear')
+    ax.axis('off')
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, dpi=300)
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
 
 # Initial bounds of the Mandelbrot set
 if "x_min" not in st.session_state:
@@ -67,55 +74,40 @@ if "image_quality" not in st.session_state:
 if "last_click_time" not in st.session_state:
     st.session_state.last_click_time = time.time()
 
-# Function to draw the canvas
-def draw_canvas(clear_canvas):
-    return st_canvas(
-        fill_color="rgba(255, 165, 0, 0.3)",  # Semi-transparent orange fill color
-        stroke_width=10,
-        stroke_color="#000000",
-        background_image=st.session_state.mandelbrot_bg,
-        height=900,  # Height of canvas
-        width=1600,  # Width of canvas
-        drawing_mode="point",  # Drawing points mode
-        key="canvas",
-        initial_drawing=None if not clear_canvas else {"objects": []}
-    )
-
-# Generating Mandelbrot image with dynamically increasing iterations
-def generate_mandelbrot_image(quality='very_low'):
-    base_iterations = 50
-    zoom_factor = st.session_state.total_zoom
-    max_iterations = base_iterations + int(np.log2(zoom_factor + 1) * base_iterations)
-
-    return save_mandelbrot_image(
-        st.session_state.x_min, st.session_state.x_max,
-        st.session_state.y_min, st.session_state.y_max,
-        st.session_state.resolution[0], st.session_state.resolution[1], max_iterations
-    )
-
-# Initialize the Mandelbrot image
+# Generate initial Mandelbrot image
 if "mandelbrot_bg" not in st.session_state:
-    st.session_state.mandelbrot_bg = generate_mandelbrot_image(quality='very_low')
-
-# Ensure the Mandelbrot image is loaded before drawing the canvas
-if st.session_state.mandelbrot_bg is None:
-    st.session_state.mandelbrot_bg = generate_mandelbrot_image(quality='very_low')
+    buf = generate_mandelbrot_image(st.session_state.x_min, st.session_state.x_max,
+                                    st.session_state.y_min, st.session_state.y_max,
+                                    st.session_state.resolution[0], st.session_state.resolution[1],
+                                    50)
+    st.session_state.mandelbrot_bg = buf
 
 # Add slider for setting the zoom factor
-zoom_factor = st.slider('Zoom Factor', min_value=-100, max_value=100, value=st.session_state.zoom_factor, step=1)
+zoom_factor = st.slider('Zoom Factor', min_value=-1000, max_value=1000, value=st.session_state.zoom_factor, step=1)
 st.session_state.zoom_factor = zoom_factor
 
 # Display total zoom level
 st.write(f"Total Zoom: {st.session_state.total_zoom:.2f}")
 
 # Setup drawing canvas
-canvas_result = draw_canvas(st.session_state.clear_canvas)
+canvas_result = st_canvas(
+    fill_color="rgba(255, 165, 0, 0.3)",  # Semi-transparent orange fill color
+    stroke_width=10,
+    stroke_color="#000000",
+    background_image=Image.open(st.session_state.mandelbrot_bg),
+    height=900,  # Height of canvas
+    width=1600,  # Width of canvas
+    drawing_mode="point",  # Drawing points mode
+    key="canvas",
+    initial_drawing=None if not st.session_state.clear_canvas else {"objects": []}
+)
 
 # Reset clear canvas flag
 st.session_state.clear_canvas = False
 
 # Check if a dot was drawn
-if canvas_result.json_data is not None and len(canvas_result.json_data["objects"]) > 0 and not st.session_state.zoom_pending:
+if canvas_result.json_data is not None and len(
+        canvas_result.json_data["objects"]) > 0 and not st.session_state.zoom_pending:
     # Get dot location
     dot = canvas_result.json_data["objects"][-1]
     x, y = dot["left"], dot["top"]
@@ -164,7 +156,11 @@ if canvas_result.json_data is not None and len(canvas_result.json_data["objects"
 # Check zoom flag
 if st.session_state.zoom_pending:
     # Generate new Mandelbrot image in low quality
-    st.session_state.mandelbrot_bg = generate_mandelbrot_image(quality='very_low')
+    buf = generate_mandelbrot_image(st.session_state.x_min, st.session_state.x_max,
+                                    st.session_state.y_min, st.session_state.y_max,
+                                    st.session_state.resolution[0], st.session_state.resolution[1],
+                                    50)
+    st.session_state.mandelbrot_bg = buf
     st.session_state.image_quality = 'very_low'
     st.session_state.zoom_pending = False
 
@@ -175,14 +171,19 @@ if st.session_state.zoom_pending:
 if st.session_state.image_quality == 'very_low':
     placeholder = st.empty()
     while time.time() - st.session_state.last_click_time < 10:
-        placeholder.text(f"Waiting for {10 - int(time.time() - st.session_state.last_click_time)} seconds to improve image quality...")
+        placeholder.text(
+            f"Waiting for {10 - int(time.time() - st.session_state.last_click_time)} seconds to improve image quality...")
         time.sleep(1)
         if canvas_result.json_data is not None and len(canvas_result.json_data["objects"]) > 0:
             st.session_state.last_click_time = time.time()
             break
     else:
         # Generate new Mandelbrot image in high quality
-        st.session_state.mandelbrot_bg = generate_mandelbrot_image(quality='high')
+        buf = generate_mandelbrot_image(st.session_state.x_min, st.session_state.x_max,
+                                        st.session_state.y_min, st.session_state.y_max,
+                                        st.session_state.resolution[0], st.session_state.resolution[1],
+                                        500)
+        st.session_state.mandelbrot_bg = buf
         st.session_state.image_quality = 'high'
 
         # Re-render empty canvas

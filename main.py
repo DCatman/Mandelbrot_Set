@@ -9,7 +9,7 @@ import time
 
 st.set_page_config(layout="wide")  # Ustawienie szerokiego układu strony
 
-st.title("Drawing a Dot and Zooming on the Mandelbrot Set")
+st.title("Drawing a Dot and Zooming on the Mandelbrot Set V1")
 
 
 # Function to generate the Mandelbrot set

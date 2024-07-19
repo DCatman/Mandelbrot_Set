@@ -80,7 +80,11 @@ if "mandelbrot_bg" not in st.session_state:
     st.session_state.mandelbrot_bg = buf
 
 # Display the Mandelbrot image
-mandelbrot_image = Image.open(st.session_state.mandelbrot_bg)
+try:
+    mandelbrot_image = Image.open(st.session_state.mandelbrot_bg)
+    st.image(mandelbrot_image, caption="Generated Mandelbrot Set", use_column_width=True)
+except Exception as e:
+    st.write(f"Error loading Mandelbrot image: {e}")
 
 # Add slider for setting the zoom factor
 zoom_factor = st.slider('Zoom Factor', min_value=-1000, max_value=1000, value=st.session_state.zoom_factor, step=1)
@@ -94,7 +98,7 @@ canvas_result = st_canvas(
     fill_color="rgba(255, 165, 0, 0.3)",  # Semi-transparent orange fill color
     stroke_width=10,
     stroke_color="#000000",
-    background_image=mandelbrot_image,
+    background_image=mandelbrot_image if 'mandelbrot_image' in locals() else None,
     height=900,  # Height of canvas
     width=1600,  # Width of canvas
     drawing_mode="point",  # Drawing points mode

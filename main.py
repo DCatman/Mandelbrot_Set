@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
+from PIL import Image
 from numba import jit
 import io
-from PIL import Image
+import time
 
 st.set_page_config(layout="wide")  # Ustawienie szerokiego układu strony
 
@@ -149,7 +150,7 @@ if canvas_result.json_data is not None and len(canvas_result.json_data["objects"
     st.session_state.image_quality = 'very_low'
 
     # Re-render empty canvas
-    st.rerun()
+    st.experimental_rerun()
 
 # Check zoom flag
 if st.session_state.zoom_pending:
@@ -163,7 +164,7 @@ if st.session_state.zoom_pending:
     st.session_state.zoom_pending = False
 
     # Re-render empty canvas
-    st.rerun()
+    st.experimental_rerun()
 
 # Improve image quality after 10 seconds if no new clicks
 if st.session_state.image_quality == 'very_low':
@@ -184,7 +185,7 @@ if st.session_state.image_quality == 'very_low':
         st.session_state.image_quality = 'high'
 
         # Re-render empty canvas
-        st.rerun()
+        st.experimental_rerun()
 
 # Display last drawn dot
 if st.session_state.last_point:

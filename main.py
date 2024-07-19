@@ -2,15 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-from PIL import Image
 from numba import jit
 import io
-import time
+from PIL import Image
 
 st.set_page_config(layout="wide")  # Ustawienie szerokiego układu strony
 
 st.title("Drawing a Dot and Zooming on the Mandelbrot Set")
-
 
 # Function to generate the Mandelbrot set
 @jit(nopython=True, fastmath=True)
@@ -31,20 +29,18 @@ def mandelbrot(h, w, x_min, x_max, y_min, y_max, max_iter):
 
     return div_time
 
-
 # Function to generate and return the Mandelbrot image as an in-memory file
 def generate_mandelbrot_image(x_min, x_max, y_min, y_max, width, height, max_iter):
     mandelbrot_image = mandelbrot(height, width, x_min, x_max, y_min, y_max, max_iter)
     fig, ax = plt.subplots(figsize=(width / 100, height / 100), dpi=100)
     ax.imshow(mandelbrot_image, cmap='inferno', extent=(x_min, x_max, y_min, y_max), interpolation='bilinear')
     ax.axis('off')
-
+    
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0, dpi=300)
     plt.close(fig)
     buf.seek(0)
     return buf
-
 
 # Initial bounds of the Mandelbrot set
 if "x_min" not in st.session_state:
@@ -82,6 +78,9 @@ if "mandelbrot_bg" not in st.session_state:
                                     50)
     st.session_state.mandelbrot_bg = buf
 
+# Display the Mandelbrot image
+st.image(st.session_state.mandelbrot_bg, use_column_width=True)
+
 # Add slider for setting the zoom factor
 zoom_factor = st.slider('Zoom Factor', min_value=-1000, max_value=1000, value=st.session_state.zoom_factor, step=1)
 st.session_state.zoom_factor = zoom_factor
@@ -106,8 +105,7 @@ canvas_result = st_canvas(
 st.session_state.clear_canvas = False
 
 # Check if a dot was drawn
-if canvas_result.json_data is not None and len(
-        canvas_result.json_data["objects"]) > 0 and not st.session_state.zoom_pending:
+if canvas_result.json_data is not None and len(canvas_result.json_data["objects"]) > 0 and not st.session_state.zoom_pending:
     # Get dot location
     dot = canvas_result.json_data["objects"][-1]
     x, y = dot["left"], dot["top"]
@@ -171,8 +169,7 @@ if st.session_state.zoom_pending:
 if st.session_state.image_quality == 'very_low':
     placeholder = st.empty()
     while time.time() - st.session_state.last_click_time < 10:
-        placeholder.text(
-            f"Waiting for {10 - int(time.time() - st.session_state.last_click_time)} seconds to improve image quality...")
+        placeholder.text(f"Waiting for {10 - int(time.time() - st.session_state.last_click_time)} seconds to improve image quality...")
         time.sleep(1)
         if canvas_result.json_data is not None and len(canvas_result.json_data["objects"]) > 0:
             st.session_state.last_click_time = time.time()
